@@ -29,6 +29,28 @@ exports.sourceNodes = ({ boundActionCreators, createNodeId }, configOptions) => 
     return nodeData
   }
 
+  const processTopic = topic => {
+    const nodeId = createNodeId(`hubspot-topic-${topic.id}`)
+    const nodeContent = JSON.stringify(topic)
+    const nodeContentDigest = crypto
+      .createHash('md5')
+      .update(nodeContent)
+      .digest('hex')
+
+    const nodeData = Object.assign({}, topic, {
+      id: nodeId,
+      parent: null,
+      children: [],
+      internal: {
+        type: `HubspotTopic`,
+        content: nodeContent,
+        contentDigest: nodeContentDigest
+      }
+    })
+
+    return nodeData
+  }
+
   const API_KEY = configOptions.key
   const filters = configOptions.filters
     ? queryString.stringify(configOptions.filters)
@@ -51,6 +73,7 @@ exports.sourceNodes = ({ boundActionCreators, createNodeId }, configOptions) => 
       return fetch(TOPICS_API_ENDPOINT)
         .then(response => response.json())
         .then(topicsData => {
+          topicsData.objects.forEach(topic => {createNode(processTopic(topic))})
           const cleanData = data.objects.map(post => {
             return {
               id: post.id,

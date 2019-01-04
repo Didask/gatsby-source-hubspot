@@ -36,6 +36,7 @@ exports.sourceNodes = ({ boundActionCreators, createNodeId }, configOptions) => 
   const API_ENDPOINT = `https://api.hubapi.com/content/api/v2/blog-posts?hapikey=${API_KEY}${
     filters ? '&' + filters : ''
   }`
+  const TOPICS_API_ENDPOINT = `https://api.hubapi.com/blogs/v3/topics?hapikey=${API_KEY}`
 
   if (!API_KEY) throw new Error('No Hubspot API key provided')
 
@@ -47,48 +48,52 @@ exports.sourceNodes = ({ boundActionCreators, createNodeId }, configOptions) => 
   return fetch(API_ENDPOINT)
     .then(response => response.json())
     .then(data => {
-      const cleanData = data.objects.map(post => {
-        return {
-          id: post.id,
-          title: post.title,
-          body: post.post_body,
-          state: post.state,
-          author: post.blog_post_author
-            ? {
-                id: post.blog_post_author.id,
-                avatar: post.blog_post_author.avatar,
-                name: post.blog_post_author.display_name,
-                full_name: post.blog_post_author.full_name,
-                bio: post.blog_post_author.bio,
-                email: post.blog_post_author.email,
-                facebook: post.blog_post_author.facebook,
-                google_plus: post.blog_post_author.google_plus,
-                linkedin: post.blog_post_author.linkedin,
-                twitter: post.blog_post_author.twitter,
-                twitter_username: post.blog_post_author.twitter_username,
-                website: post.blog_post_author.website,
-                slug: post.blog_post_author.slug
-              }
-            : null,
-          feature_image: {
-            url: post.featured_image,
-            alt_text: post.featured_image_alt_text
-          },
-          meta: {
-            title: post.page_title,
-            description: post.meta_description
-          },
-          summary: post.post_summary,
-          published: post.publish_date,
-          updated: post.updated,
-          created: post.created,
-          slug: post.slug,
-          topic_ids: post.topic_ids
-        }
-      })
-      cleanData.forEach(post => {
-        const nodeData = processPost(post)
-        createNode(nodeData)
-      })
+      return fetch(TOPICS_API_ENDPOINT)
+        .then(response => response.json())
+        .then(topicsData => {
+          const cleanData = data.objects.map(post => {
+            return {
+              id: post.id,
+              title: post.title,
+              body: post.post_body,
+              state: post.state,
+              author: post.blog_post_author
+                ? {
+                    id: post.blog_post_author.id,
+                    avatar: post.blog_post_author.avatar,
+                    name: post.blog_post_author.display_name,
+                    full_name: post.blog_post_author.full_name,
+                    bio: post.blog_post_author.bio,
+                    email: post.blog_post_author.email,
+                    facebook: post.blog_post_author.facebook,
+                    google_plus: post.blog_post_author.google_plus,
+                    linkedin: post.blog_post_author.linkedin,
+                    twitter: post.blog_post_author.twitter,
+                    twitter_username: post.blog_post_author.twitter_username,
+                    website: post.blog_post_author.website,
+                    slug: post.blog_post_author.slug
+                  }
+                : null,
+              feature_image: {
+                url: post.featured_image,
+                alt_text: post.featured_image_alt_text
+              },
+              meta: {
+                title: post.page_title,
+                description: post.meta_description
+              },
+              summary: post.post_summary,
+              published: post.publish_date,
+              updated: post.updated,
+              created: post.created,
+              slug: post.slug,
+              topics: post.topic_ids.map(topic_id => topicsData.objects.filter(topicData => topicData.id === topic_id)[0])
+            }
+          })
+          cleanData.forEach(post => {
+            const nodeData = processPost(post)
+            createNode(nodeData)
+          })
+        })
     })
 }

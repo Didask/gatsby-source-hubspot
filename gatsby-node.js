@@ -51,26 +51,53 @@ exports.sourceNodes = ({ boundActionCreators, createNodeId }, configOptions) => 
     return nodeData
   }
 
+  const processAuthor = author => {
+    const nodeId = createNodeId(`hubspot-author-${author.id}`)
+    const nodeContent = JSON.stringify(author)
+    const nodeContentDigest = crypto
+      .createHash('md5')
+      .update(nodeContent)
+      .digest('hex')
+
+    const nodeData = Object.assign({}, author, {
+      id: nodeId,
+      parent: null,
+      children: [],
+      internal: {
+        type: `HubspotAuthor`,
+        content: nodeContent,
+        contentDigest: nodeContentDigest
+      }
+    })
+
+    return nodeData
+  }
+
   const API_KEY = configOptions.key
   const filters = configOptions.filters
     ? queryString.stringify(configOptions.filters)
     : null
-  const API_ENDPOINT = `https://api.hubapi.com/content/api/v2/blog-posts?hapikey=${API_KEY}${
+  const POSTS_API_ENDPOINT = `https://api.hubapi.com/content/api/v2/blog-posts?hapikey=${API_KEY}${
     filters ? '&' + filters : ''
   }`
   const TOPICS_API_ENDPOINT = `https://api.hubapi.com/blogs/v3/topics?hapikey=${API_KEY}`
+  const AUTHORS_API_ENDPOINT = `https://api.hubapi.com/blogs/v3/blog-authors?hapikey=${API_KEY}`
 
   if (!API_KEY) throw new Error('No Hubspot API key provided')
 
   console.log(
     '\n  gatsby-source-hubspot\n  ------------------------- \n  Fetching posts from: \x1b[33m%s\x1b[0m',
-    `\n  ${API_ENDPOINT}\n`
+    `\n  ${POSTS_API_ENDPOINT}\n`
   )
 
-  return fetch(API_ENDPOINT)
+  fetch(POSTS_API_ENDPOINT)
     .then(response => response.json())
     .then(data => {
-      return fetch(TOPICS_API_ENDPOINT)
+        console.log(
+          '\n  Fetching topics from: \x1b[33m%s\x1b[0m',
+          `\n  ${TOPICS_API_ENDPOINT}\n`
+        )
+          fetch(TOPICS_API_ENDPOINT)
         .then(response => response.json())
         .then(topicsData => {
           topicsData.objects.forEach(topic => {createNode(processTopic(topic))})
@@ -118,5 +145,15 @@ exports.sourceNodes = ({ boundActionCreators, createNodeId }, configOptions) => 
             createNode(nodeData)
           })
         })
+    })
+
+  console.log(
+    '\n  Fetching authors from: \x1b[33m%s\x1b[0m',
+    `\n  ${AUTHORS_API_ENDPOINT}\n`
+  )
+  fetch(AUTHORS_API_ENDPOINT)
+    .then(response => response.json())
+    .then(data => {
+      data.objects.forEach(author => {createNode(processAuthor(author))})
     })
 }

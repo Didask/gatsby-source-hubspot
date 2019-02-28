@@ -121,7 +121,8 @@ exports.sourceNodes = async ({ boundActionCreators, createNodeId }, configOption
       },
       meta: {
         title: post.page_title,
-        description: post.meta_description
+        description: post.meta_description,
+        portalId: post.portal_id
       },
       summary: post.post_summary,
       published: post.publish_date,
